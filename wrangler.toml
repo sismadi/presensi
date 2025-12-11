@@ -1,0 +1,13 @@
+name = "presensi-api"
+main = "src/index.js"
+compatibility_date = "2025-12-11"
+
+# Kalau pakai routes, bisa tambahkan:
+# routes = [
+#   { pattern = "presensi-api.wawan.workers.dev/*", zone_name = "" }
+# ]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "disertasi_db"
+database_id = "GANTI-DENGAN-ID-D1-ANDA"
