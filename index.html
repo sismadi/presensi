@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <title>CRUD Presensi Wajah - D1 Database</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f5f5f5;
+      color: #222;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 1rem 1.5rem 3rem;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 0.25rem;
+    }
+    .subtitle {
+      text-align: center;
+      margin-bottom: 1.5rem;
+      font-size: 0.9rem;
+      color: #555;
+    }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 1rem 1.25rem 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+    .card-header h2 {
+      margin: 0;
+      font-size: 1.1rem;
+    }
+    label {
+      display: block;
+      font-size: 0.9rem;
+      margin-bottom: 0.25rem;
+      font-weight: 600;
+    }
+    input[type="text"],
+    input[type="datetime-local"],
+    textarea {
+      width: 100%;
+      box-sizing: border-box;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      padding: 0.5rem 0.6rem;
+      font-size: 0.9rem;
+      margin-bottom: 0.75rem;
+      font-family: inherit;
+    }
+    textarea {
+      min-height: 160px;
+      resize: vertical;
+    }
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .col {
+      flex: 1 1 250px;
+    }
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+    button {
+      border-radius: 999px;
+      border: none;
+      padding: 0.45rem 0.9rem;
+      font-size: 0.9rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+    button.primary {
+      background: #2563eb;
+      color: white;
+    }
+    button.secondary {
+      background: #e5e7eb;
+      color: #111827;
+    }
+    button.danger {
+      background: #dc2626;
+      color: white;
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+    .status {
+      font-size: 0.85rem;
+      margin-top: 0.25rem;
+      color: #4b5563;
+    }
+    .status.error {
+      color: #b91c1c;
+    }
+    .status.success {
+      color: #15803d;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+    th, td {
+      border-bottom: 1px solid #e5e7eb;
+      padding: 0.45rem 0.35rem;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background: #f3f4f6;
+      font-weight: 600;
+    }
+    tr:hover {
+      background: #f9fafb;
+    }
+    .tag {
+      display: inline-block;
+      background: #e0f2fe;
+      color: #0369a1;
+      padding: 0.15rem 0.5rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+    }
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.82rem;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .truncate {
+      max-width: 260px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .small {
+      font-size: 0.78rem;
+      color: #6b7280;
+    }
+
+    @media (max-width: 768px) {
+      .card {
+        padding: 0.8rem 0.9rem 1.2rem;
+      }
+      table {
+        font-size: 0.8rem;
+      }
+      .truncate {
+        max-width: 150px;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>Presensi Wajah &mdash; CRUD D1</h1>
+  <div class="subtitle">
+    Frontend untuk menyimpan / membaca / mengubah / menghapus data presensi wajah<br>
+    <span class="small">Backend: Cloudflare Worker + D1 (schema disesuaikan di sisi Worker)</span>
+  </div>
+
+  <!-- FORM CARD -->
+  <div class="card">
+    <div class="card-header">
+      <h2 id="form-title">Form Presensi Wajah</h2>
+      <span id="current-mode" class="tag">Mode: Create</span>
+    </div>
+
+    <form id="attendance-form">
+      <!-- hidden id utk update -->
+      <input type="hidden" id="record-id" />
+
+      <div class="row">
+        <div class="col">
+          <label for="name">Nama</label>
+          <input type="text" id="name" placeholder="Nama wajah (misal: sismadi)" required />
+
+          <label for="time">Waktu Presensi</label>
+          <input type="datetime-local" id="time" />
+
+          <label for="note">Catatan (opsional)</label>
+          <input type="text" id="note" placeholder="Keterangan tambahan (opsional)" />
+        </div>
+
+        <div class="col">
+          <label for="labelsJson">JSON Labels / Embedding</label>
+          <textarea id="labelsJson" class="mono" spellcheck="false"></textarea>
+          <div class="small">
+            Simpan JSON hasil <em>face recognition</em> (misal embedding vector).  
+            Di backend D1 bisa disimpan sebagai TEXT (JSON.stringify).
+          </div>
+        </div>
+      </div>
+
+      <div class="buttons">
+        <button type="submit" class="primary" id="btn-save">
+          💾 <span id="btn-save-text">Simpan Baru</span>
+        </button>
+        <button type="button" class="secondary" id="btn-reset">
+          🔄 Reset Form
+        </button>
+      </div>
+      <div id="form-status" class="status"></div>
+    </form>
+  </div>
+
+  <!-- LIST CARD -->
+  <div class="card">
+    <div class="card-header">
+      <h2>Data Presensi (D1)</h2>
+      <button type="button" class="secondary" id="btn-reload">
+        🔃 Reload dari D1
+      </button>
+    </div>
+    <div id="list-status" class="status"></div>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nama</th>
+          <th>Waktu</th>
+          <th>Catatan</th>
+          <th>Labels (JSON)</th>
+          <th>Aksi</th>
+        </tr>
+        </thead>
+        <tbody id="attendance-body">
+        <!-- rows diisi via JS -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ============================================
+  // KONFIGURASI API (ganti dengan Worker Anda)
+  // ============================================
+  // Ekspektasi endpoint (disarankan):
+  // GET    {API_BASE}/attendance        -> list (return {results:[...]})
+  // POST   {API_BASE}/attendance        -> create (body JSON)
+  // PUT    {API_BASE}/attendance/:id    -> update (body JSON)
+  // DELETE {API_BASE}/attendance/:id    -> delete
+  //
+  // Schema (contoh di D1):
+  // CREATE TABLE attendance (
+  //   id INTEGER PRIMARY KEY AUTOINCREMENT,
+  //   name TEXT NOT NULL,
+  //   ts   TEXT NOT NULL,
+  //   note TEXT,
+  //   labels TEXT NOT NULL
+  // );
+  // ============================================
+
+  const API_BASE = "https://YOUR-WORKER-URL.workers.dev"; // <-- GANTI di sini
+
+  const form = document.getElementById("attendance-form");
+  const recordIdInput = document.getElementById("record-id");
+  const nameInput = document.getElementById("name");
+  const timeInput = document.getElementById("time");
+  const noteInput = document.getElementById("note");
+  const labelsTextarea = document.getElementById("labelsJson");
+
+  const btnSave = document.getElementById("btn-save");
+  const btnSaveText = document.getElementById("btn-save-text");
+  const btnReset = document.getElementById("btn-reset");
+  const btnReload = document.getElementById("btn-reload");
+
+  const formStatus = document.getElementById("form-status");
+  const listStatus = document.getElementById("list-status");
+  const tbody = document.getElementById("attendance-body");
+  const currentMode = document.getElementById("current-mode");
+  const formTitle = document.getElementById("form-title");
+
+  // Prefill labels dengan JSON embedding contoh
+  labelsTextarea.value = `{"labels":[{"name":"sismadi","vec":[0.24850371479988098,0.08695987612009048,0.02695208229124546,0.04567386582493782,0.04858039319515228,0.011343304067850113,0.033668987452983856,0.07890184223651886,0.028669068589806557,0.009170843288302422,0.004915720783174038,0.0069239335134625435,0.032620564103126526,0.010053367353975773,0.06533950567245483,0.15009382367134094,0.0770995169878006,0.02578909695148468,0.008749959990382195,0.010514399036765099,0.0113638611510396,0.00286864023655653,0.008957345969974995,0.008926832117140293,0.0427374430000782,0.010100067593157291,0.007357430644333363,0.007811861578375101,0.06925658881664276,0.009627189487218857,0.11109572649002075,0.10006074607372284,0.038189273327589035,0.011595869436860085,0.0042090825736522675,0.003946970216929913,0.009958283044397831,0.0016875064466148615,0.00464827474206686,0.006109914276748896,0.006759236101061106,0.00149735517334193,0.00092082389164716,0.0018047017510980368,0.007042047567665577,0.0021478314884006977,0.006210888735949993,0.014961829409003258,0.05293945595622063,0.011076340451836586,0.00589890917763114,0.005210433155298233,0.013679469004273415,0.0015710035804659128,0.005688258446753025,0.006018293090164661,0.07944637537002563,0.008874842897057533,0.007228884845972061,0.008001944050192833,0.2592577040195465,0.010122560895979404,0.0771084800362587,0.0516449511051178,0.0623137466609478,0.013975553214550018,0.009777202270925045,0.011737317778170109,0.015118330717086792,0.0024983033072203398,0.00739413732662797,0.008232242427766323,0.009076803922653198,0.0019040079787373543,0.002300921129062772,0.0019881881307810545,0.006954996380954981,0.0016892707208171487,0.0063269371166825294,0.008949694223701954,0.01515879761427641,0.0030967113561928272,0.0023726392537355423,0.0017984394216910005,0.0026014302857220173,0.0006104740896262228,0.0019465188961476088,0.002332272008061409,0.011670568957924843,0.0026046433486044407,0.0024961717426776886,0.0023095780052244663,0.008495057001709938,0.0015713995089754462,0.008433857932686806,0.008777707815170288,0.05102741718292236,0.013776762410998344,0.006251615937799215,0.005636115558445454,0.008503962308168411,0.002027767011895776,0.006263351533561945,0.006975291762501001,0.009578224271535873,0.002299374667927623,0.001379429711960256,0.002423038939014077,0.007766351103782654,0.0030971993692219257,0.008721821010112762,0.015256663784384727,0.08263647556304932,0.013816406019032001,0.006732518319040537,0.00711522763594985,0.010735706426203251,0.002868540119379759,0.006566602736711502,0.007546970155090094,0.12263083457946777,0.011791246011853218,0.01257426105439663,0.011710992082953453,0.12793926894664764,0.013655701652169228,0.06203887611627579,0.05963592603802681,0.039182741194963455,0.058281309902668,0.006442537065595388,0.08821143209934235,0.009458377957344055,0.013276788406074047,0.007502113934606314,0.25639432668685913,0.004790548700839281,0.005286847706884146,0.0009129190584644675,0.00646424014121294,0.0038689966313540936,0.006899512372910976,0.006613252218812704,0.08465436846017838,0.012334119528532028,0.011879058554768562,0.001035256078466773,0.00995574425905943,0.002074403455480933,0.002573442179709673,0.0019976457115262747,0.01262373011559248,0.0044271694496273994,0.006096293218433857,0.0018330024322494864,0.0077859265729784966,0.0052458192221820354,0.005436630453914404,0.0103383120149374,0.0619591549038887,0.00767917837947607,0.00910255592316389,0.0013436924200505018,0.007403731346130371,0.002193090505897999,0.003281863871961832,0.0014285066863521934,0.012095272541046143,0.0014939350076019764,0.001564911799505353,0.00026851979782804847,0.0018813700880855322,0.0017225932097062469,0.002118912059813738,0.0015287629794329405,0.01294342428445816,0.009188178926706314,0.009485566057264805,0.0015639901394024491,0.007468038704246283,0.002571547171100974,0.00263886502943933,0.0021877451799809933,0.011617896147072315,0.008082753047347069,0.008391992188990116,0.0016039960319176316,0.012723565101623535,0.012682524509727955,0.012188095599412918,0.012853221967816353,0.07840466499328613,0.052698295563459396,0.08864717185497284,0.009017]}]}`;
+
+  // Set default datetime-local (sekarang)
+  function setDefaultTimeNow() {
+    const now = new Date();
+    // format: yyyy-MM-ddThh:mm
+    const pad = (n) => (n < 10 ? "0" + n : n);
+    const value = [
+      now.getFullYear(),
+      pad(now.getMonth() + 1),
+      pad(now.getDate())
+    ].join("-") + "T" + pad(now.getHours()) + ":" + pad(now.getMinutes());
+    timeInput.value = value;
+  }
+  setDefaultTimeNow();
+
+  function setModeCreate() {
+    recordIdInput.value = "";
+    btnSaveText.textContent = "Simpan Baru";
+    currentMode.textContent = "Mode: Create";
+    currentMode.style.background = "#dcfce7";
+    currentMode.style.color = "#166534";
+    formTitle.textContent = "Form Presensi Wajah (Create)";
+  }
+
+  function setModeEdit(id) {
+    recordIdInput.value = id;
+    btnSaveText.textContent = "Update Data";
+    currentMode.textContent = "Mode: Edit ID " + id;
+    currentMode.style.background = "#fef9c3";
+    currentMode.style.color = "#92400e";
+    formTitle.textContent = "Form Presensi Wajah (Edit)";
+  }
+
+  function showFormStatus(msg, type = "") {
+    formStatus.textContent = msg || "";
+    formStatus.className = "status" + (type ? " " + type : "");
+  }
+
+  function showListStatus(msg, type = "") {
+    listStatus.textContent = msg || "";
+    listStatus.className = "status" + (type ? " " + type : "");
+  }
+
+  async function fetchJSON(url, options = {}) {
+    const res = await fetch(url, options);
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error("HTTP " + res.status + " " + res.statusText + " - " + text);
+    }
+    try {
+      return await res.json();
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Load list from D1
+  async function loadAttendance() {
+    showListStatus("Memuat data dari D1...", "");
+    tbody.innerHTML = "";
+    try {
+      const data = await fetchJSON(API_BASE + "/attendance");
+      const rows = data && data.results ? data.results : (Array.isArray(data) ? data : []);
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="small">Belum ada data presensi.</td></tr>';
+        showListStatus("Tidak ada data.", "");
+        return;
+      }
+      for (const row of rows) {
+        const tr = document.createElement("tr");
+
+        const tdId = document.createElement("td");
+        tdId.textContent = row.id;
+        tr.appendChild(tdId);
+
+        const tdName = document.createElement("td");
+        tdName.textContent = row.name || "";
+        tr.appendChild(tdName);
+
+        const tdTs = document.createElement("td");
+        tdTs.innerHTML = row.ts
+          ? `<span class="mono small">${row.ts}</span>`
+          : "";
+        tr.appendChild(tdTs);
+
+        const tdNote = document.createElement("td");
+        tdNote.textContent = row.note || "";
+        tr.appendChild(tdNote);
+
+        const tdLabels = document.createElement("td");
+        const labelsText = row.labels || row.labels_json || "";
+        const short = (labelsText || "").slice(0, 80);
+        tdLabels.innerHTML = `<span class="mono truncate" title="${labelsText.replace(/"/g, "&quot;")}">${short}${labelsText.length > 80 ? "..." : ""}</span>`;
+        tr.appendChild(tdLabels);
+
+        const tdActions = document.createElement("td");
+        const btnEdit = document.createElement("button");
+        btnEdit.type = "button";
+        btnEdit.className = "secondary";
+        btnEdit.textContent = "✏️ Edit";
+        btnEdit.addEventListener("click", () => fillFormForEdit(row));
+
+        const btnDelete = document.createElement("button");
+        btnDelete.type = "button";
+        btnDelete.className = "danger";
+        btnDelete.textContent = "🗑️ Hapus";
+        btnDelete.addEventListener("click", () => deleteRecord(row.id));
+
+        tdActions.appendChild(btnEdit);
+        tdActions.appendChild(btnDelete);
+        tr.appendChild(tdActions);
+
+        tbody.appendChild(tr);
+      }
+      showListStatus("Data berhasil dimuat (" + rows.length + " baris).", "success");
+    } catch (err) {
+      console.error(err);
+      showListStatus("Gagal memuat data: " + err.message, "error");
+      tbody.innerHTML = '<tr><td colspan="6" class="small">Gagal memuat data. Periksa console.</td></tr>';
+    }
+  }
+
+  function fillFormForEdit(row) {
+    setModeEdit(row.id);
+    nameInput.value = row.name || "";
+    // convert ISO ts -> datetime-local
+    if (row.ts) {
+      // row.ts di DB disimpan ISO string, misal "2025-12-11T09:00:00.000Z"
+      const dt = new Date(row.ts);
+      if (!isNaN(dt.getTime())) {
+        const pad = (n) => (n < 10 ? "0" + n : n);
+        const value = [
+          dt.getFullYear(),
+          pad(dt.getMonth() + 1),
+          pad(dt.getDate())
+        ].join("-") + "T" + pad(dt.getHours()) + ":" + pad(dt.getMinutes());
+        timeInput.value = value;
+      }
+    }
+    noteInput.value = row.note || "";
+    const labelsText = row.labels || row.labels_json || "";
+    labelsTextarea.value = labelsText || "";
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function deleteRecord(id) {
+    if (!confirm("Yakin ingin menghapus ID " + id + " ?")) return;
+    showListStatus("Menghapus ID " + id + "...", "");
+    try {
+      await fetchJSON(API_BASE + "/attendance/" + encodeURIComponent(id), {
+        method: "DELETE"
+      });
+      showListStatus("Berhasil menghapus ID " + id, "success");
+      await loadAttendance();
+    } catch (err) {
+      console.error(err);
+      showListStatus("Gagal menghapus: " + err.message, "error");
+    }
+  }
+
+  function resetForm() {
+    form.reset();
+    setModeCreate();
+    setDefaultTimeNow();
+    // restore contoh JSON (opsional) atau kosongkan:
+    // labelsTextarea.value = "";
+    showFormStatus("", "");
+  }
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    showFormStatus("", "");
+    const id = recordIdInput.value.trim();
+    const name = nameInput.value.trim();
+    const note = noteInput.value.trim();
+    let ts = timeInput.value;
+
+    if (!name) {
+      showFormStatus("Nama wajib diisi.", "error");
+      return;
+    }
+
+    if (!ts) {
+      // jika kosong, gunakan now ISO
+      ts = new Date().toISOString();
+    } else {
+      // dari datetime-local -> ISO
+      const dt = new Date(ts);
+      if (!isNaN(dt.getTime())) {
+        ts = dt.toISOString();
+      }
+    }
+
+    const labelsRaw = labelsTextarea.value.trim();
+    if (!labelsRaw) {
+      showFormStatus("JSON labels wajib diisi.", "error");
+      return;
+    }
+
+    // Opsional: validasi JSON, tapi di DB tetap disimpan TEXT.
+    let labelsParsed = null;
+    try {
+      labelsParsed = JSON.parse(labelsRaw);
+    } catch (err) {
+      showFormStatus("JSON labels tidak valid: " + err.message, "error");
+      return;
+    }
+
+    const payload = {
+      name,
+      ts,
+      note,
+      labels: JSON.stringify(labelsParsed) // kirim string JSON (biar jelas untuk Worker)
+    };
+
+    btnSave.disabled = true;
+    btnReset.disabled = true;
+
+    try {
+      if (id) {
+        showFormStatus("Mengupdate data ID " + id + "...", "");
+        await fetchJSON(API_BASE + "/attendance/" + encodeURIComponent(id), {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        showFormStatus("Berhasil mengupdate data.", "success");
+      } else {
+        showFormStatus("Menyimpan data baru...", "");
+        await fetchJSON(API_BASE + "/attendance", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        showFormStatus("Berhasil menyimpan data baru.", "success");
+      }
+      await loadAttendance();
+      // reset hanya jika create; kalau edit mungkin user lanjut edit
+      if (!id) resetForm();
+    } catch (err) {
+      console.error(err);
+      showFormStatus("Gagal menyimpan: " + err.message, "error");
+    } finally {
+      btnSave.disabled = false;
+      btnReset.disabled = false;
+    }
+  });
+
+  btnReset.addEventListener("click", () => {
+    resetForm();
+  });
+
+  btnReload.addEventListener("click", () => {
+    loadAttendance();
+  });
+
+  // initial load
+  loadAttendance();
+</script>
+</body>
+</html>
